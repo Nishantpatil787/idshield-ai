@@ -1,0 +1,6 @@
+{
+  "name": "IDShield AI - Document Screening Console",
+  "description": "AI-based fake identity and travel document screening prototype console for authorized verification personnel.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
