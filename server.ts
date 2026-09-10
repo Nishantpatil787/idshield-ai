@@ -11,6 +11,7 @@ import { FaceVerificationEngineTS } from './server/face';
 import { TamperingDetectorEngine } from './server/tampering/detector';
 import { RiskEngine } from './server/risk/engine';
 import { CentralScreeningOrchestrator } from './server/orchestrator';
+import { generateScreeningPdf } from './server/report';
 
 const app = express();
 const PORT = 3000;
@@ -659,6 +660,35 @@ app.post('/api/screening/process', async (req, res) => {
     }
     return res.status(400).json({
       error: error.message || 'Failed to process document screening.',
+    });
+  }
+});
+
+// POST /api/screening/report - Server-Side Structured PDF Report Endpoint
+app.post('/api/screening/report', async (req, res) => {
+  try {
+    const screeningRecord = req.body.screeningRecord || req.body.record || req.body;
+
+    if (!screeningRecord || !screeningRecord.screeningId) {
+      return res.status(400).json({
+        error: 'Invalid or missing screeningRecord object in request body.',
+      });
+    }
+
+    const pdfBuffer = await generateScreeningPdf(screeningRecord);
+    const caseId = screeningRecord.crossDocumentData?.case_id || screeningRecord.screeningId;
+    const sanitizedFilename = `IDShield_Screening_Report_${caseId.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedFilename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    return res.end(pdfBuffer);
+  } catch (error: any) {
+    console.error('PDF generation endpoint error:', error.message || error);
+    return res.status(500).json({
+      error: 'Unable to generate PDF report. Please try again.',
+      details: error.message,
     });
   }
 });

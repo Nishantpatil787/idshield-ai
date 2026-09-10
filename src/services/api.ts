@@ -325,6 +325,39 @@ export const ScreeningService = {
   },
 
   /**
+   * Request server-side PDF screening report and trigger client download
+   */
+  async downloadPdfReport(record: ScreeningRecord): Promise<void> {
+    const response = await fetch('/api/screening/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ screeningRecord: record }),
+    });
+
+    if (!response.ok) {
+      let msg = 'Failed to generate PDF report from server.';
+      try {
+        const errJson = await response.json();
+        if (errJson.error) msg = errJson.error;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    const blob = await response.blob();
+    const caseId = record.crossDocumentData?.case_id || record.screeningId;
+    const filename = `IDShield_Screening_Report_${caseId.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
+
+  /**
    * Reset data to default initial state
    */
   async resetToDemoDefaults(): Promise<void> {

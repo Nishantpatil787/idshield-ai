@@ -7,6 +7,7 @@ import {
   XCircle, 
   Download, 
   RefreshCw, 
+  Loader2,
   ZoomIn, 
   ZoomOut, 
   RotateCcw, 
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ScreeningRecord } from '../types';
 import { FaceVerificationCard } from '../components/FaceVerificationCard';
+import { ScreeningService } from '../services/api';
 
 interface ScreeningResultPageProps {
   screening: ScreeningRecord | null;
@@ -49,6 +51,25 @@ export const ScreeningResultPage: React.FC<ScreeningResultPageProps> = ({
   const [officerDecision, setOfficerDecision] = useState<'APPROVED' | 'MANUAL_REVIEW' | 'REJECTED' | null>(null);
   const [officerNote, setOfficerNote] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // PDF Report State
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  const handleGeneratePdfReport = async () => {
+    if (!screening || isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    setPdfError(null);
+
+    try {
+      await ScreeningService.downloadPdfReport(screening);
+    } catch (err: any) {
+      console.error('PDF report generation error:', err);
+      setPdfError(err.message || 'Unable to generate report. Please try again.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   if (!screening) {
     return (
@@ -170,22 +191,36 @@ export const ScreeningResultPage: React.FC<ScreeningResultPageProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold border border-slate-200 shadow-xs hover:border-slate-300 transition-all cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>Download Report</span>
-          </button>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleGeneratePdfReport}
+              disabled={isGeneratingPdf}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold border border-slate-200 shadow-xs hover:border-slate-300 transition-all cursor-pointer ${
+                isGeneratingPdf ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 text-slate-500" />
+              )}
+              <span>{isGeneratingPdf ? 'Generating PDF...' : 'Download Report'}</span>
+            </button>
 
-          <button
-            onClick={onNavigateToNew}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm shadow-blue-500/20 transition-all cursor-pointer"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Verify Another</span>
-          </button>
+            <button
+              onClick={onNavigateToNew}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm shadow-blue-500/20 transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Verify Another</span>
+            </button>
+          </div>
+          {pdfError && (
+            <p className="text-[11px] text-red-600 font-medium mt-1">
+              {pdfError}
+            </p>
+          )}
         </div>
       </div>
 
