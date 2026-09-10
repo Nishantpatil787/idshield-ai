@@ -49,6 +49,8 @@ export interface CreateScreeningPayload {
   uploadedFileName: string;
   fileSizeBytes: number;
   imagePreviewUrl?: string;
+  selfieImageUrl?: string;
+  referenceImage?: string;
   additionalNotes?: string;
   supportingDocuments?: SupportingDocumentPayload[];
 }
@@ -111,6 +113,8 @@ export const ScreeningService = {
             imagePayload: payload.imagePreviewUrl,
             fileName: payload.uploadedFileName,
             fileSizeBytes: payload.fileSizeBytes,
+            selfieImage: payload.selfieImageUrl || payload.referenceImage,
+            referenceImage: payload.selfieImageUrl || payload.referenceImage,
             additionalNotes: payload.additionalNotes,
             supportingDocuments: payload.supportingDocuments,
           }),

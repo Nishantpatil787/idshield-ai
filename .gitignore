@@ -1,0 +1,51 @@
+# IDShield AI — Git Ignore Rules
+
+# Environment & Secret Configurations
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+/.pnpm-debug.log*
+
+# Build Outputs & Generated Dist
+dist/
+dist-ssr/
+*.local
+
+# Logs & Temporary Files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Python Cache & Model Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+ENV/
+
+# PyTorch / ML Weights & Large Dataset Artifacts
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.bin
+datasets/*.mdb
+datasets/*.zip
+datasets/manifest.csv
+
+# IDE & OS Artifacts
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

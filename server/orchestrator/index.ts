@@ -290,6 +290,7 @@ export class CentralScreeningOrchestrator {
     // 7. Stage 8: Face Verification
     const stage8Start = Date.now();
     let faceVerificationResult: any = null;
+    let faceResStatus: string = 'NOT_AVAILABLE';
     const refFace = payload.referenceImage || payload.selfieImage;
 
     if (refFace) {
@@ -300,6 +301,7 @@ export class CentralScreeningOrchestrator {
           probeImage: payload.imagePayload,
         });
 
+        faceResStatus = faceRes.status;
         const simScorePct = Math.round(faceRes.similarityScore * 100);
         const isMatch = faceRes.status === 'MATCH';
 
@@ -316,7 +318,7 @@ export class CentralScreeningOrchestrator {
 
         auditTrail.push({
           stage: 'VERIFYING_FACE',
-          status: isMatch ? 'SUCCESS' : 'REVIEW_REQUIRED',
+          status: isMatch ? 'SUCCESS' : faceRes.status === 'NO_MATCH' ? 'WARNING' : 'REVIEW_REQUIRED',
           durationMs: Date.now() - stage8Start,
           details: `Biometric face verification status: ${faceRes.status} (${simScorePct}% similarity)`,
         });
@@ -327,6 +329,7 @@ export class CentralScreeningOrchestrator {
           durationMs: Date.now() - stage8Start,
           details: `Face verification error: ${err.message}`,
         });
+        faceResStatus = 'NOT_AVAILABLE';
         faceVerificationResult = {
           faceDetectedInDocument: true,
           similarityScore: 0,
@@ -341,6 +344,7 @@ export class CentralScreeningOrchestrator {
         durationMs: Date.now() - stage8Start,
         details: 'No reference selfie provided. Face verification marked NOT_AVAILABLE.',
       });
+      faceResStatus = 'NOT_AVAILABLE';
       faceVerificationResult = {
         faceDetectedInDocument: true,
         similarityScore: 0,
@@ -359,7 +363,7 @@ export class CentralScreeningOrchestrator {
       crossDocumentResult: crossDocumentData,
       tamperingResult,
       faceResult: {
-        status: refFace ? (faceVerificationResult.matchStatus === 'MATCHED' ? 'MATCH' : 'REVIEW_REQUIRED') : 'NOT_AVAILABLE',
+        status: faceResStatus,
         matchStatus: faceVerificationResult.matchStatus,
         similarityScore: faceVerificationResult.similarityScore,
       },
