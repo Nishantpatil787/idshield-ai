@@ -90,10 +90,10 @@ Output strictly valid JSON matching the schema.`;
     }
 
     // Models to attempt in order with retry for high-demand spikes (503/429)
-    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+    const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
     let lastError: any = null;
     let response: any = null;
-    let successfulModel = 'gemini-3.8-flash';
+    let successfulModel = 'gemini-2.5-flash';
 
     for (const model of candidateModels) {
       for (let attempt = 0; attempt < 2; attempt++) {

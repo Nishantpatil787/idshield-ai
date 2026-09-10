@@ -100,13 +100,18 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
   const processFile = (file: File) => {
     setError(null);
     setSelectedFile(file);
-    if (file.type.startsWith('image/')) {
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImageOrSvg = file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.svg');
+
+    if (isPdf || isImageOrSvg) {
       const reader = new FileReader();
       reader.onload = () => {
         setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
     } else {
+      setError('Unsupported document type. Please upload a PDF, PNG, JPG, WEBP, or SVG file.');
       setPreviewUrl(null);
     }
   };
@@ -500,15 +505,16 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
           ) : (
             <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3 w-full">
-                {previewUrl ? (
+                {previewUrl && !selectedFile.type.includes('pdf') && !selectedFile.name.toLowerCase().endsWith('.pdf') ? (
                   <img
                     src={previewUrl}
                     alt="Document preview"
                     className="w-16 h-12 object-cover rounded border border-slate-700 bg-slate-900 flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-16 h-12 rounded border border-slate-700 bg-slate-900 flex items-center justify-center text-slate-400 flex-shrink-0">
+                  <div className="w-16 h-12 rounded border border-slate-700 bg-slate-900 flex flex-col items-center justify-center text-rose-400 flex-shrink-0">
                     <FileText className="w-6 h-6" />
+                    <span className="text-[9px] font-bold text-rose-300 uppercase">PDF</span>
                   </div>
                 )}
                 <div className="overflow-hidden">

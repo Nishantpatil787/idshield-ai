@@ -8,7 +8,7 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "lint": "tsc --noEmit",
-    "test": "tsx server/ocr/runTests.ts && tsx server/validation/tests/runValidationTests.ts && tsx server/consistency/tests/runConsistencyTests.ts"
+    "test": "tsx server/ocr/runTests.ts && tsx server/validation/tests/runValidationTests.ts && tsx server/consistency/tests/runConsistencyTests.ts && tsx server/face/tests/runFaceTests.ts && tsx server/risk/tests/runRiskTests.ts && tsx server/tests/runIntegrationTests.ts"
   },
   "dependencies": {
     "@google/genai": "latest",

@@ -188,8 +188,8 @@ export function runAllMrzTests(): { passed: number; failed: number; total: numbe
   assert(validSvgPrep.mimeType === 'image/svg+xml', 'MIME type inferred as image/svg+xml');
 
   // Unsupported format (e.g. text/plain or executable)
-  const badMimePrep = validateAndPreprocessImage('data:application/pdf;base64,JVBERi0xLjQKJc==', 'document.pdf');
-  assert(badMimePrep.valid === false, 'PDF/non-image format rejected gracefully');
+  const badMimePrep = validateAndPreprocessImage('data:text/plain;base64,SGVsbG8=', 'document.txt');
+  assert(badMimePrep.valid === false, 'Text/plain non-image format rejected gracefully');
 
   // Empty string
   const emptyPrep = validateAndPreprocessImage('', 'test.jpg');

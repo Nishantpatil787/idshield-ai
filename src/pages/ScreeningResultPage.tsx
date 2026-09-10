@@ -22,6 +22,7 @@ import {
   Search
 } from 'lucide-react';
 import { ScreeningRecord } from '../types';
+import { FaceVerificationCard } from '../components/FaceVerificationCard';
 
 interface ScreeningResultPageProps {
   screening: ScreeningRecord | null;
@@ -729,6 +730,12 @@ export const ScreeningResultPage: React.FC<ScreeningResultPageProps> = ({
           )}
         </div>
       </div>
+
+      {/* 5. BIOMETRIC FACE VERIFICATION MODULE */}
+      <FaceVerificationCard
+        documentImageUrl={document.imageUrl}
+        faceVerificationData={faceVerification}
+      />
 
       {/* 6. HUMAN-IN-THE-LOOP DECISION ACTION BAR */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6 shadow-sm">

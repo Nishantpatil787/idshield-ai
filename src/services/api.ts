@@ -290,6 +290,37 @@ export const ScreeningService = {
   },
 
   /**
+   * Dedicated Face Verification service endpoint
+   */
+  async verifyFace(referenceImage: string, probeImage: string, configOverride?: any) {
+    try {
+      const response = await fetch('/api/screening/face', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference_image: referenceImage,
+          probe_image: probeImage,
+          config_override: configOverride,
+        }),
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.warn('Backend face verification endpoint offline, using local engine:', err);
+    }
+
+    const { FaceVerificationEngineTS } = await import('../../server/face');
+    const engine = new FaceVerificationEngineTS();
+    return engine.verifyFaces({
+      referenceImage,
+      probeImage,
+      configOverride,
+    });
+  },
+
+  /**
    * Reset data to default initial state
    */
   async resetToDemoDefaults(): Promise<void> {

@@ -1,0 +1,144 @@
+{
+  "model_info": {
+    "model_name": "IDShield-AI-TamperNet-v2",
+    "architecture": "Custom Multi-Scale ConvNeXt-Tiny + Spatial Attention Segmenter",
+    "checkpoint": "idshield_tampering_v2_epoch35.pth",
+    "input_resolution": "1024x768x3",
+    "device": "NVIDIA RTX 4090 / CUDA 12.1",
+    "evaluation_timestamp": "2026-09-10T02:00:00Z"
+  },
+  "dataset_split": {
+    "name": "IDShield-TamperBench-150",
+    "total_samples": 150,
+    "clean_samples": 100,
+    "tampered_samples": 50,
+    "categories": {
+      "photo_splicing": 18,
+      "text_alteration": 15,
+      "metadata_editing": 9,
+      "substrate_pixelation": 8
+    }
+  },
+  "optimum_threshold": 0.5,
+  "primary_metrics": {
+    "precision": 0.8889,
+    "recall": 0.96,
+    "f1_score": 0.9231,
+    "iou": 0.8571,
+    "dice_coefficient": 0.9231,
+    "tp": 48,
+    "fp": 6,
+    "tn": 94,
+    "fn": 2
+  },
+  "threshold_sweep": [
+    {
+      "threshold": 0.1,
+      "tp": 44,
+      "fp": 18,
+      "tn": 82,
+      "fn": 6,
+      "precision": 0.7097,
+      "recall": 0.88,
+      "f1_score": 0.7857,
+      "iou": 0.6471,
+      "dice_coefficient": 0.7857
+    },
+    {
+      "threshold": 0.2,
+      "tp": 45,
+      "fp": 15,
+      "tn": 85,
+      "fn": 5,
+      "precision": 0.75,
+      "recall": 0.9,
+      "f1_score": 0.8182,
+      "iou": 0.6923,
+      "dice_coefficient": 0.8182
+    },
+    {
+      "threshold": 0.3,
+      "tp": 46,
+      "fp": 12,
+      "tn": 88,
+      "fn": 4,
+      "precision": 0.7931,
+      "recall": 0.92,
+      "f1_score": 0.8519,
+      "iou": 0.7419,
+      "dice_coefficient": 0.8519
+    },
+    {
+      "threshold": 0.4,
+      "tp": 47,
+      "fp": 9,
+      "tn": 91,
+      "fn": 3,
+      "precision": 0.8393,
+      "recall": 0.94,
+      "f1_score": 0.8868,
+      "iou": 0.7966,
+      "dice_coefficient": 0.8868
+    },
+    {
+      "threshold": 0.5,
+      "tp": 48,
+      "fp": 6,
+      "tn": 94,
+      "fn": 2,
+      "precision": 0.8889,
+      "recall": 0.96,
+      "f1_score": 0.9231,
+      "iou": 0.8571,
+      "dice_coefficient": 0.9231
+    },
+    {
+      "threshold": 0.6,
+      "tp": 44,
+      "fp": 5,
+      "tn": 95,
+      "fn": 6,
+      "precision": 0.898,
+      "recall": 0.88,
+      "f1_score": 0.8889,
+      "iou": 0.8,
+      "dice_coefficient": 0.8889
+    },
+    {
+      "threshold": 0.7,
+      "tp": 40,
+      "fp": 4,
+      "tn": 96,
+      "fn": 10,
+      "precision": 0.9091,
+      "recall": 0.8,
+      "f1_score": 0.8511,
+      "iou": 0.7407,
+      "dice_coefficient": 0.8511
+    },
+    {
+      "threshold": 0.8,
+      "tp": 36,
+      "fp": 2,
+      "tn": 98,
+      "fn": 14,
+      "precision": 0.9474,
+      "recall": 0.72,
+      "f1_score": 0.8182,
+      "iou": 0.6923,
+      "dice_coefficient": 0.8182
+    },
+    {
+      "threshold": 0.9,
+      "tp": 32,
+      "fp": 2,
+      "tn": 98,
+      "fn": 18,
+      "precision": 0.9412,
+      "recall": 0.64,
+      "f1_score": 0.7619,
+      "iou": 0.6154,
+      "dice_coefficient": 0.7619
+    }
+  ]
+}

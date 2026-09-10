@@ -13,12 +13,13 @@ const SUPPORTED_MIME_TYPES = new Set([
   'image/webp',
   'image/svg+xml',
   'image/svg',
+  'application/pdf',
 ]);
 
-const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
 
 /**
- * Validates an incoming document image payload (base64 string or data URL).
+ * Validates an incoming document image or PDF payload (base64 string or data URL).
  */
 export function validateAndPreprocessImage(
   rawPayload: string | undefined | null,
@@ -27,7 +28,7 @@ export function validateAndPreprocessImage(
   if (!rawPayload || typeof rawPayload !== 'string') {
     return {
       valid: false,
-      error: 'No document image payload provided. Please upload a valid passport image.',
+      error: 'No document payload provided. Please upload a valid document (PDF, JPG, PNG, WEBP, or SVG).',
       mimeType: '',
       base64Data: '',
       fileSizeBytes: 0,
@@ -56,7 +57,7 @@ export function validateAndPreprocessImage(
       } else {
         return {
           valid: false,
-          error: 'Corrupted image data URL structure. Could not extract base64 bytes.',
+          error: 'Corrupted document data URL structure. Could not extract base64 bytes.',
           mimeType: '',
           base64Data: '',
           fileSizeBytes: 0,
@@ -67,18 +68,20 @@ export function validateAndPreprocessImage(
     mimeType = 'image/svg+xml';
     base64Data = Buffer.from(trimmed).toString('base64');
   } else {
-    // Infer mime type from filename extension if not in data URL
+    // Infer mime type from filename extension or magic bytes if not in data URL
     const ext = (fileName.split('.').pop() || '').toLowerCase();
-    if (ext === 'png') mimeType = 'image/png';
+    if (ext === 'pdf') mimeType = 'application/pdf';
+    else if (ext === 'png') mimeType = 'image/png';
     else if (ext === 'webp') mimeType = 'image/webp';
     else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
     else if (ext === 'svg') mimeType = 'image/svg+xml';
+    else if (trimmed.startsWith('JVBERi0')) mimeType = 'application/pdf'; // %PDF- magic bytes in base64
   }
 
   if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
     return {
       valid: false,
-      error: `Unsupported image format: "${mimeType}". Please upload a JPG, PNG, WEBP, or SVG document image.`,
+      error: `Unsupported document format: "${mimeType}". Please upload a PDF, JPG, PNG, WEBP, or SVG document.`,
       mimeType,
       base64Data: '',
       fileSizeBytes: 0,

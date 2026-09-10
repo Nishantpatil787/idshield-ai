@@ -7,6 +7,10 @@ import { createServer as createViteServer } from 'vite';
 import { runPassportPipeline } from './server/ocr/pipeline';
 import { ValidationEngine } from './server/validation';
 import { CrossDocumentConsistencyEngine } from './server/consistency';
+import { FaceVerificationEngineTS } from './server/face';
+import { TamperingDetectorEngine } from './server/tampering/detector';
+import { RiskEngine } from './server/risk/engine';
+import { CentralScreeningOrchestrator } from './server/orchestrator';
 
 const app = express();
 const PORT = 3000;
@@ -42,12 +46,14 @@ app.get('/api/health', (req, res) => {
 
 // Helper to strip data URL prefix to get pure base64
 function extractBase64AndMime(dataUrl: string): { base64: string; mimeType: string } {
+  if (!dataUrl) return { mimeType: 'image/jpeg', base64: '' };
+  
   if (dataUrl.startsWith('data:')) {
     const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (matches) {
-      return { mimeType: matches[1], base64: matches[2] };
+      return { mimeType: matches[1].toLowerCase(), base64: matches[2] };
     }
-    const svgMatch = dataUrl.match(/^data:image\/svg\+xml;utf8,(.+)$/);
+    const svgMatch = dataUrl.match(/^data:image\/svg\+xml(?:;[^,]*)?,(.+)$/i);
     if (svgMatch) {
       return {
         mimeType: 'image/svg+xml',
@@ -55,7 +61,11 @@ function extractBase64AndMime(dataUrl: string): { base64: string; mimeType: stri
       };
     }
   }
-  return { mimeType: 'image/jpeg', base64: dataUrl };
+  const trimmed = dataUrl.trim();
+  if (trimmed.startsWith('JVBERi0')) {
+    return { mimeType: 'application/pdf', base64: trimmed };
+  }
+  return { mimeType: 'image/jpeg', base64: trimmed };
 }
 
 // Heuristic fallback generator when Gemini API key is missing or offline
@@ -516,402 +526,137 @@ app.post('/api/screening/consistency', async (req, res) => {
   }
 });
 
+// POST /api/screening/face - Dedicated Face Verification Module Endpoint
+app.post('/api/screening/face', async (req, res) => {
+  try {
+    const { reference_image, probe_image, referenceImage, probeImage, config_override, configOverride } = req.body;
+    const ref = reference_image || referenceImage;
+    const probe = probe_image || probeImage;
+
+    const faceEngine = new FaceVerificationEngineTS();
+    const result = faceEngine.verifyFaces({
+      referenceImage: ref,
+      probeImage: probe,
+      configOverride: config_override || configOverride,
+    });
+
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Face verification endpoint error:', error.message || error);
+    return res.status(400).json({ error: error.message || 'Face verification failed.' });
+  }
+});
+
+// POST /api/screening/tampering - Dedicated Tampering Detection Engine Endpoint
+app.post('/api/screening/tampering', async (req, res) => {
+  try {
+    const { imagePayload, fileName, documentType, ocrText, mrzRaw } = req.body;
+    const detector = new TamperingDetectorEngine();
+    const result = detector.analyze({
+      imagePayload,
+      fileName,
+      documentType,
+      ocrText,
+      mrzRaw,
+    });
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Tampering detection endpoint error:', error.message || error);
+    return res.status(400).json({
+      error: {
+        code: 'TAMPERING_ANALYSIS_FAILED',
+        message: error.message || 'Tampering analysis failed.',
+        stage: 'ANALYZING_TAMPERING',
+      },
+    });
+  }
+});
+
+// POST /api/screening/risk - Dedicated Explainable Risk Engine Endpoint
+app.post('/api/screening/risk', async (req, res) => {
+  try {
+    const { ocrResult, mrzResult, validationResult, consistencyResult, crossDocumentResult, tamperingResult, faceResult } = req.body;
+    const result = RiskEngine.calculateRisk({
+      ocrResult,
+      mrzResult,
+      validationResult,
+      consistencyResult,
+      crossDocumentResult,
+      tamperingResult,
+      faceResult,
+    });
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Risk engine endpoint error:', error.message || error);
+    return res.status(400).json({
+      error: {
+        code: 'RISK_CALCULATION_FAILED',
+        message: error.message || 'Risk calculation failed.',
+        stage: 'CALCULATING_RISK',
+      },
+    });
+  }
+});
+
+// POST /api/screening/analyze - Central Orchestrated End-to-End Screening Endpoint
+app.post('/api/screening/analyze', async (req, res) => {
+  try {
+    const result = await CentralScreeningOrchestrator.analyzeCase(req.body);
+    return res.json(result);
+  } catch (error: any) {
+    console.error('End-to-end screening analysis error:', error.error || error.message || error);
+    if (error.error) {
+      return res.status(400).json(error);
+    }
+    return res.status(400).json({
+      error: {
+        code: 'SCREENING_ANALYSIS_FAILED',
+        message: error.message || 'End-to-end screening workflow failed.',
+        stage: 'ANALYSIS',
+      },
+    });
+  }
+});
+
 // POST /api/screening/process - Full Intake to ScreeningRecord Converter
 app.post('/api/screening/process', async (req, res) => {
   try {
     const {
       imagePayload,
-      fileName = 'passport.png',
-      fileSizeBytes = 1840000,
-      operatorId = 'OFFICER-4819',
-      stationId = 'TERM-3-SEC-A',
-      additionalNotes,
+      fileName,
+      fileSizeBytes,
+      documentType,
+      referenceImage,
+      selfieImage,
       supportingDocuments,
+      operatorId,
+      stationId,
+      additionalNotes,
     } = req.body;
 
     if (!imagePayload) {
       return res.status(400).json({ error: 'imagePayload is required.' });
     }
 
-    // Run OCR & MRZ Pipeline
-    const pipelineResult = await runPassportPipeline({
+    const result = await CentralScreeningOrchestrator.analyzeCase({
       imagePayload,
       fileName,
-    });
-
-    const idSuffix = String(Math.floor(1000 + Math.random() * 9000));
-    const newId = `SCR-2026-${idSuffix}`;
-    const parsedMrz = pipelineResult.mrz.parsed;
-    const checksums = pipelineResult.mrz.checksum_validation;
-    const consistency = pipelineResult.consistency;
-
-    // Run Document Validation Engine
-    const validationSummary = await ValidationEngine.validate({
-      document_type: 'passport',
-      fields: pipelineResult.fields,
-      mrz: pipelineResult.mrz,
-      consistency: pipelineResult.consistency,
-    });
-
-    const docNum = pipelineResult.fields.passport_number.value || parsedMrz?.passportNumber || `P${idSuffix}001`;
-    const fullName = pipelineResult.fields.full_name.value || parsedMrz?.fullName || 'UNKNOWN HOLDER';
-    const nationality = pipelineResult.fields.nationality.value || parsedMrz?.nationality || 'UTOPIA';
-    const dob = pipelineResult.fields.date_of_birth.value || parsedMrz?.dateOfBirth || '1985-01-01';
-    const expiry = pipelineResult.fields.date_of_expiry.value || parsedMrz?.expiryDate || '2030-01-01';
-    const gender = pipelineResult.fields.gender.value || parsedMrz?.sex || 'U';
-    const issuingAuthority = pipelineResult.fields.issuing_country?.value || 'PASSPORT ISSUING AUTHORITY';
-
-    const mrzPassed = checksums ? checksums.all_passed : false;
-    const consistencyPassed = consistency.overallMatch;
-    const overallValid = validationSummary.overall_status === 'VALID';
-
-    // Run Cross-Document Consistency Engine if supporting documents exist
-    let crossDocumentData: any = undefined;
-    const formattedSupportingDocs: any[] = [];
-
-    if (Array.isArray(supportingDocuments) && supportingDocuments.length > 0) {
-      const consistencyEngine = new CrossDocumentConsistencyEngine();
-      const primaryDocInput = {
-        document_id: `DOC-PRIMARY-${idSuffix}`,
-        document_type: 'passport' as const,
-        role: 'primary' as const,
-        label: `PASSPORT (${docNum})`,
-        extracted_fields: {
-          full_name: fullName,
-          passport_number: docNum,
-          date_of_birth: dob,
-          nationality: nationality,
-          gender: gender,
-          expiry_date: expiry,
-        },
-        mrz_data: pipelineResult.mrz,
-      };
-
-      const supportingDocInputs = supportingDocuments.map((sup: any, idx: number) => {
-        const supId = sup.id || `DOC-SUP-${idSuffix}-${idx + 1}`;
-        const supCategory = sup.category || 'visa';
-        const supNum = sup.documentNumber || sup.associatedPassportNumber || `V${idSuffix}${idx + 1}`;
-        formattedSupportingDocs.push({
-          id: supId,
-          category: supCategory,
-          categoryLabel: sup.categoryLabel || (supCategory === 'visa' ? 'Visa / Entry Clearance' : 'Supporting Credential'),
-          documentNumber: supNum,
-          associatedPassportNumber: sup.associatedPassportNumber || (supCategory === 'visa' ? sup.documentNumber : undefined),
-          fullName: sup.fullName || fullName,
-          nationality: sup.nationality || nationality,
-          countryCode: (sup.nationality || nationality).slice(0, 3).toUpperCase(),
-          dateOfBirth: sup.dateOfBirth || dob,
-          expiryDate: sup.expiryDate || expiry,
-          issueDate: sup.issueDate,
-          gender: sup.gender || gender,
-          visaType: sup.visaType || 'Tourist / Business',
-          imageUrl: sup.imageUrl,
-          rawUploadedFileName: sup.rawUploadedFileName || `${supCategory}_scan.jpg`,
-          fileSizeBytes: sup.fileSizeBytes || 1250000,
-        });
-
-        return {
-          document_id: supId,
-          document_type: supCategory,
-          role: 'supporting' as const,
-          label: `${supCategory.toUpperCase()} (${supNum})`,
-          extracted_fields: {
-            full_name: sup.fullName || fullName,
-            passport_number: sup.documentNumber || supNum,
-            associated_passport_number: sup.associatedPassportNumber || (supCategory === 'visa' ? sup.documentNumber : undefined),
-            document_number: supNum,
-            date_of_birth: sup.dateOfBirth || dob,
-            nationality: sup.nationality || nationality,
-            gender: sup.gender || gender,
-            issue_date: sup.issueDate,
-            expiry_date: sup.expiryDate || expiry,
-          },
-        };
-      });
-
-      crossDocumentData = consistencyEngine.evaluateCase({
-        case_id: newId,
-        primary_document: primaryDocInput,
-        supporting_documents: supportingDocInputs,
-      });
-    }
-
-    // Calculate dynamic risk level & score based on deterministic check digits and consistency
-    let riskScore = 8;
-    const explainableFactors: any[] = [];
-
-    if (!checksums?.passport_number) {
-      riskScore += 35;
-      explainableFactors.push({
-        id: 'rf-chk-doc',
-        factor: 'MRZ Document Number Check Digit Mismatch',
-        weight: 'CRITICAL',
-        impactPoints: 35,
-        description: 'ICAO 9303 7-3-1 parity check failed on passport number field.',
-        mitigationSuggestion: 'Conduct physical examination and ultraviolet forensic illumination.',
-      });
-    }
-
-    if (!checksums?.date_of_birth) {
-      riskScore += 25;
-      explainableFactors.push({
-        id: 'rf-chk-dob',
-        factor: 'MRZ Date of Birth Checksum Failure',
-        weight: 'HIGH',
-        impactPoints: 25,
-        description: 'Date of birth checksum does not mathematically align with printed digits.',
-        mitigationSuggestion: 'Request secondary identity proof.',
-      });
-    }
-
-    if (!checksums?.composite) {
-      riskScore += 30;
-      explainableFactors.push({
-        id: 'rf-chk-comp',
-        factor: 'Composite MRZ Checksum Violation',
-        weight: 'CRITICAL',
-        impactPoints: 30,
-        description: 'Overall composite parity failed across Line 2 data components.',
-        mitigationSuggestion: 'Escalate to secondary supervisor.',
-      });
-    }
-
-    if (!consistencyPassed) {
-      riskScore += 25;
-      explainableFactors.push({
-        id: 'rf-consist',
-        factor: 'Visual OCR vs MRZ Discrepancy',
-        weight: 'HIGH',
-        impactPoints: 25,
-        description: consistency.summary,
-        mitigationSuggestion: 'Perform cross-reference against physical passport typography.',
-      });
-    }
-
-    // Check if Cross-Document Consistency flagged discrepancies
-    if (crossDocumentData && crossDocumentData.overall_status === 'REVIEW_REQUIRED') {
-      const mismatchCount = crossDocumentData.summary.mismatches;
-      const reviewReqCount = crossDocumentData.summary.review_required;
-      const impact = Math.min(45, mismatchCount * 25 + reviewReqCount * 10);
-      riskScore += impact;
-      explainableFactors.push({
-        id: 'rf-cross-doc',
-        factor: 'Cross-Document Identity Inconsistency',
-        weight: mismatchCount > 0 ? 'HIGH' : 'MEDIUM',
-        impactPoints: impact,
-        description: crossDocumentData.explanations[0] || 'Discrepancy detected across submitted case credentials.',
-        mitigationSuggestion: 'Verify physical documents and interview bearer regarding biographical discrepancy.',
-      });
-    }
-
-    riskScore = Math.min(100, Math.max(5, riskScore));
-    const riskLevel = riskScore < 30 ? 'LOW' : riskScore < 65 ? 'MEDIUM' : 'HIGH';
-    const recommendedAction =
-      riskScore < 30
-        ? 'CLEAR'
-        : riskScore < 60
-        ? 'SECONDARY_INTERVIEW'
-        : riskScore < 80
-        ? 'PHYSICAL_INSPECTION'
-        : 'DENY_ENTRY';
-
-    const validationItems: any[] = validationSummary.results.map((r) => ({
-      id: `val-${r.rule_id}`,
-      title: r.rule_id.replace(/_/g, ' ').toUpperCase(),
-      category: r.category,
-      status: r.status,
-      detail: r.message,
-    }));
-
-    const isFlagged = !overallValid || (crossDocumentData && crossDocumentData.overall_status === 'REVIEW_REQUIRED');
-
-    const record = {
-      screeningId: newId,
-      timestamp: new Date().toISOString(),
+      fileSizeBytes,
+      documentType,
+      referenceImage: referenceImage || selfieImage,
+      selfieImage,
+      supportingDocuments,
       operatorId,
       stationId,
-      status: !isFlagged ? 'COMPLETED' : 'FLAGGED_FOR_REVIEW',
-      isDemoData: !pipelineResult.processing.isRealOcr,
-      ocrProvider: pipelineResult.processing.provider,
-      rawOcrText: pipelineResult.ocr.text,
-      ocrConfidence: pipelineResult.ocr.confidence ?? 0.95,
-      document: {
-        id: `DOC-${idSuffix}`,
-        category: 'passport',
-        categoryLabel: 'Standard Biometric Passport',
-        documentNumber: docNum,
-        fullName: fullName,
-        nationality: nationality,
-        countryCode: parsedMrz?.nationality || nationality.slice(0, 3).toUpperCase(),
-        dateOfBirth: dob,
-        expiryDate: expiry,
-        issueDate: '2020-05-10',
-        issuingAuthority: issuingAuthority,
-        gender: gender,
-        mrzCode: pipelineResult.mrz.raw || undefined,
-        rawUploadedFileName: fileName,
-        fileSizeBytes: fileSizeBytes,
-        uploadedAt: new Date().toISOString(),
-        imageUrl: imagePayload.startsWith('data:') ? imagePayload : undefined,
-      },
-      supportingDocuments: formattedSupportingDocs.length > 0 ? formattedSupportingDocs : undefined,
-      crossDocumentData: crossDocumentData || undefined,
-      extractedFields: [
-        {
-          fieldName: 'Passport Number',
-          extractedValue: docNum,
-          confidence: pipelineResult.fields.passport_number.confidence ?? 0.98,
-          validationStatus: checksums?.passport_number ? 'PASS' : 'FAIL',
-          mrzMatched: consistency.comparisons.find((c) => c.field === 'passport_number')?.status === 'MATCH',
-        },
-        {
-          fieldName: 'Full Name',
-          extractedValue: fullName,
-          confidence: pipelineResult.fields.full_name.confidence ?? 0.96,
-          validationStatus: 'PASS',
-          mrzMatched: consistency.comparisons.find((c) => c.field === 'full_name')?.status === 'MATCH',
-        },
-        {
-          fieldName: 'Nationality',
-          extractedValue: nationality,
-          confidence: pipelineResult.fields.nationality.confidence ?? 0.99,
-          validationStatus: 'PASS',
-          mrzMatched: consistency.comparisons.find((c) => c.field === 'nationality')?.status === 'MATCH',
-        },
-        {
-          fieldName: 'Date of Birth',
-          extractedValue: dob,
-          confidence: pipelineResult.fields.date_of_birth.confidence ?? 0.95,
-          validationStatus: checksums?.date_of_birth ? 'PASS' : 'FAIL',
-          mrzMatched: consistency.comparisons.find((c) => c.field === 'date_of_birth')?.status === 'MATCH',
-        },
-        {
-          fieldName: 'Date of Expiry',
-          extractedValue: expiry,
-          confidence: pipelineResult.fields.date_of_expiry.confidence ?? 0.96,
-          validationStatus: checksums?.expiry_date ? 'PASS' : 'FAIL',
-          mrzMatched: consistency.comparisons.find((c) => c.field === 'date_of_expiry')?.status === 'MATCH',
-        },
-        {
-          fieldName: 'Gender / Sex',
-          extractedValue: gender,
-          confidence: pipelineResult.fields.gender.confidence ?? 0.98,
-          validationStatus: 'PASS',
-          mrzMatched: consistency.comparisons.find((c) => c.field === 'gender')?.status === 'MATCH',
-        },
-      ],
-      validation: {
-        overallValid,
-        score: Math.round((validationSummary.passed / Math.max(1, validationSummary.total_rules)) * 100),
-        requiredFieldsStatus: validationSummary.results.find((r) => r.rule_id === 'required_fields')?.status || 'PASS',
-        formatValidationStatus: pipelineResult.mrz.detected ? 'PASS' : 'FAIL',
-        mrzValidationStatus: mrzPassed ? 'PASS' : 'FAIL',
-        crossFieldConsistencyStatus: consistencyPassed ? 'PASS' : 'WARNING',
-        items: validationItems,
-      },
-      validationData: validationSummary,
-      tampering: {
-        overallTamperingScore: overallValid ? 4 : 38,
-        photoManipulationStatus: 'PASS',
-        textManipulationStatus: consistencyPassed ? 'PASS' : 'WARNING',
-        metadataAnomalyStatus: 'PASS',
-        items: [
-          {
-            id: 't-1',
-            componentName: 'MRZ vs VIZ Optical Typography Parity',
-            type: 'text_manipulation',
-            status: consistencyPassed ? 'PASS' : 'WARNING',
-            confidenceScore: 96,
-            description: consistencyPassed
-              ? 'Glyph alignment and optical check digits match standardized issuer parameters.'
-              : 'Typography discrepancy between visual text block and decoded MRZ strings.',
-          },
-          {
-            id: 't-2',
-            componentName: 'Substrate & Micro-Print Resolution',
-            type: 'substrate_irregularity',
-            status: 'PASS',
-            confidenceScore: 92,
-            description: 'No digital pixelation or clone brush artifacts detected along credential border.',
-          },
-        ],
-      },
-      faceVerification: {
-        faceDetectedInDocument: true,
-        similarityScore: 96,
-        matchStatus: 'MATCHED',
-        livenessConfidence: 94,
-        notes: 'Document bearer portrait extracted from primary photo zone with clear facial boundaries.',
-      },
-      riskAssessment: {
-        riskScore,
-        riskLevel,
-        primaryRiskSummary:
-          riskScore < 30
-            ? 'Credential verified: Genuine ICAO TD3 passport structure with valid MRZ checksums and optical parity.'
-            : explainableFactors[0]?.description || 'Anomaly detected during automated passport screening.',
-        explainableFactors: explainableFactors.length > 0 ? explainableFactors : [
-          {
-            id: 'rf-clean',
-            factor: 'Clean Credential Baseline',
-            weight: 'LOW',
-            impactPoints: 0,
-            description: 'No mathematical checksum violations or visual-to-MRZ discrepancies detected.',
-          },
-        ],
-        recommendedAction,
-      },
-      mrzData: {
-        detected: pipelineResult.mrz.detected,
-        format: pipelineResult.mrz.format,
-        raw: pipelineResult.mrz.raw,
-        line1: pipelineResult.mrz.line1,
-        line2: pipelineResult.mrz.line2,
-        parsed: parsedMrz ? {
-          documentCode: parsedMrz.documentCode,
-          issuingState: parsedMrz.issuingState,
-          surname: parsedMrz.surname,
-          givenNames: parsedMrz.givenNames,
-          fullName: parsedMrz.fullName,
-          passportNumber: parsedMrz.passportNumber,
-          nationality: parsedMrz.nationality,
-          dateOfBirth: parsedMrz.dateOfBirth,
-          rawDob: parsedMrz.rawDob,
-          sex: parsedMrz.sex,
-          expiryDate: parsedMrz.expiryDate,
-          rawExpiryDate: parsedMrz.rawExpiryDate,
-          personalNumber: parsedMrz.personalNumber,
-        } : undefined,
-        checksumValidation: checksums ? {
-          passport_number: checksums.passport_number,
-          date_of_birth: checksums.date_of_birth,
-          expiry_date: checksums.expiry_date,
-          personal_number: checksums.personal_number,
-          composite: checksums.composite,
-          all_passed: checksums.all_passed,
-          details: checksums.details,
-        } : undefined,
-      },
-      consistencyData: {
-        overallMatch: consistency.overallMatch,
-        matchCount: consistency.matchCount,
-        mismatchCount: consistency.mismatchCount,
-        comparisons: consistency.comparisons.map((c) => ({
-          field: c.field,
-          fieldLabel: c.fieldLabel,
-          ocrValue: c.ocrValue,
-          mrzValue: c.mrzValue,
-          status: c.status,
-          detail: c.detail,
-        })),
-        summary: consistency.summary,
-      },
       notes: additionalNotes,
-    };
+    });
 
-    return res.json(record);
+    return res.json(result.screeningRecord);
   } catch (error: any) {
     console.error('Screening process error:', error.message || error);
+    if (error.error) {
+      return res.status(400).json(error);
+    }
     return res.status(400).json({
       error: error.message || 'Failed to process document screening.',
     });

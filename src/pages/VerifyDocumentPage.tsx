@@ -76,13 +76,17 @@ export const VerifyDocumentPage: React.FC<VerifyDocumentPageProps> = ({
     setSelectedFile(file);
     setFileName(file.name);
 
-    if (file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.svg')) {
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImageOrSvg = file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.svg');
+
+    if (isPdf || isImageOrSvg) {
       const reader = new FileReader();
       reader.onload = (e) => {
         setDocumentImageUrl(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     } else {
+      setErrorMessage('Unsupported file format. Please upload a PDF, PNG, JPG, WEBP, or SVG file.');
       setDocumentImageUrl(null);
     }
   };
@@ -400,12 +404,20 @@ export const VerifyDocumentPage: React.FC<VerifyDocumentPageProps> = ({
                     </div>
 
                     <div className="max-w-xs mx-auto rounded-lg overflow-hidden border border-slate-200 shadow-xs">
-                      <img
-                        src={documentImageUrl}
-                        alt="Document Preview"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-32 object-contain bg-slate-900"
-                      />
+                      {documentImageUrl?.startsWith('data:application/pdf') || fileName.toLowerCase().endsWith('.pdf') ? (
+                        <div className="w-full h-32 bg-slate-900 flex flex-col items-center justify-center p-4 text-slate-200 gap-2">
+                          <FileText className="w-10 h-10 text-rose-400" />
+                          <span className="text-xs font-semibold text-slate-300 truncate max-w-[200px]">{fileName}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono uppercase">PDF Document</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={documentImageUrl}
+                          alt="Document Preview"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-32 object-contain bg-slate-900"
+                        />
+                      )}
                     </div>
                   </div>
                 ) : (
