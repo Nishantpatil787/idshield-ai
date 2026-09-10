@@ -11,6 +11,8 @@ const SUPPORTED_MIME_TYPES = new Set([
   'image/jpg',
   'image/png',
   'image/webp',
+  'image/svg+xml',
+  'image/svg',
 ]);
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -42,10 +44,15 @@ export function validateAndPreprocessImage(
       mimeType = matches[1].toLowerCase();
       base64Data = matches[2];
     } else {
-      const svgMatch = trimmed.match(/^data:image\/svg\+xml;utf8,(.+)$/);
+      const svgMatch = trimmed.match(/^data:image\/svg\+xml(?:;[^,]*)?,(.+)$/i);
       if (svgMatch) {
         mimeType = 'image/svg+xml';
-        base64Data = Buffer.from(decodeURIComponent(svgMatch[1])).toString('base64');
+        const rawContent = svgMatch[1];
+        try {
+          base64Data = Buffer.from(decodeURIComponent(rawContent)).toString('base64');
+        } catch {
+          base64Data = Buffer.from(rawContent).toString('base64');
+        }
       } else {
         return {
           valid: false,
@@ -56,18 +63,22 @@ export function validateAndPreprocessImage(
         };
       }
     }
+  } else if (trimmed.startsWith('<svg') || trimmed.includes('<svg xmlns=')) {
+    mimeType = 'image/svg+xml';
+    base64Data = Buffer.from(trimmed).toString('base64');
   } else {
     // Infer mime type from filename extension if not in data URL
     const ext = (fileName.split('.').pop() || '').toLowerCase();
     if (ext === 'png') mimeType = 'image/png';
     else if (ext === 'webp') mimeType = 'image/webp';
     else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+    else if (ext === 'svg') mimeType = 'image/svg+xml';
   }
 
   if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
     return {
       valid: false,
-      error: `Unsupported image format: "${mimeType}". Please upload a JPG, PNG, or WEBP document image.`,
+      error: `Unsupported image format: "${mimeType}". Please upload a JPG, PNG, WEBP, or SVG document image.`,
       mimeType,
       base64Data: '',
       fileSizeBytes: 0,

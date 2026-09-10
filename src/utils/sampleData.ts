@@ -2,13 +2,14 @@ import { SampleDocumentPreset } from '../types';
 
 // Helper to generate realistic visual ID SVG data URLs
 export function generateMockIdSvg(
-  type: 'aadhaar' | 'pan' | 'passport' | 'driving_license',
+  type: 'aadhaar' | 'pan' | 'passport' | 'visa' | 'driving_license',
   tampered: boolean,
   tamperType: 'dob' | 'photo' | 'font' | 'watermark' | 'none' = 'none'
 ): string {
   const isAadhaar = type === 'aadhaar';
   const isPan = type === 'pan';
   const isPassport = type === 'passport';
+  const isVisa = type === 'visa';
   const isDL = type === 'driving_license';
 
   let title = 'GOVERNMENT OF INDIA';
@@ -36,12 +37,20 @@ export function generateMockIdSvg(
     docNumber = 'Z8491023';
     name = 'VIKRAM MALHOTRA';
     dob = '22/11/1988';
+  } else if (isVisa) {
+    title = 'CONSULAR ENTRY VISA / MRV-A';
+    subTitle = 'IMMIGRATION & BORDER CONTROL AUTHORITY';
+    primaryColor = '#1e3a8a';
+    accentColor = '#2563eb';
+    docNumber = 'V10298492';
+    name = 'EMMA WATSON';
+    dob = '15/04/1990';
   } else if (isDL) {
-    title = 'UNION OF INDIA DRIVING LICENCE';
-    subTitle = 'TRANSPORT DEPARTMENT MAHARASHTRA';
+    title = 'NATIONAL IDENTITY CARD';
+    subTitle = 'DEPARTMENT OF CIVIL REGISTRATION';
     primaryColor = '#065f46';
     accentColor = '#10b981';
-    docNumber = 'MH-04-20180019283';
+    docNumber = 'ID-8819283-A';
     name = 'AMIT VERMA';
     dob = '05/06/1996';
   }
@@ -364,56 +373,57 @@ export const SAMPLE_DOCUMENT_PRESETS: SampleDocumentPreset[] = [
     }
   },
   {
-    id: 'sample-dl-synthetic',
-    title: 'Driving License (Counterfeit / Altered Hologram)',
-    documentType: 'driving_license',
-    expectedOutcome: 'DAMAGED_WATERMARK',
-    description: 'Driving licence with forged layout, counterfeit transport hologram sticker, and misaligned state RTO registration numbers.',
-    tags: ['Driving License', 'Counterfeit Hologram', 'Suspicious', 'RTO Tamper'],
-    imageUrl: generateMockIdSvg('driving_license', true, 'watermark'),
+    id: 'sample-visa-consular',
+    title: 'Travel Visa (Consular Entry MRV-A)',
+    documentType: 'visa',
+    expectedOutcome: 'GENUINE',
+    description: 'Consular travel visa sticker featuring official machine-readable zone (MRV-A), multi-spectral background printing, and intact security Guilloche wave patterns.',
+    tags: ['Travel Visa', 'Consular Stamp', 'Genuine', 'Valid MRZ'],
+    imageUrl: generateMockIdSvg('visa', false, 'none'),
     selfieUrl: generateSelfieMockSvg(true),
     simulatedReport: {
-      id: 'REP-DL-COUNTERFEIT-418',
+      id: 'REP-VISA-CONSULAR-501',
       timestamp: new Date().toISOString(),
-      documentType: 'driving_license',
-      fileName: 'maharashtra_rto_dl_amit_verma.png',
-      fileSize: '1.89 MB',
+      documentType: 'visa',
+      fileName: 'consular_travel_visa_emma_watson.png',
+      fileSize: '1.65 MB',
       imageDimensions: { width: 1200, height: 760 },
-      authenticityScore: 48,
-      overallStatus: 'SUSPICIOUS',
-      riskLevel: 'HIGH',
-      summary: 'High probability of counterfeit document. The state holographic seal lacks genuine diffraction optics and the background guilloche grid lacks state transport micro-text.',
-      tamperingDetected: true,
+      authenticityScore: 97,
+      overallStatus: 'PASSED',
+      riskLevel: 'LOW',
+      summary: 'Consular travel visa verified genuine. ICAO 9303 MRV-A checksums compute with zero parity defects, guilloche background lines continuous, and consular security seal intact.',
+      tamperingDetected: false,
       ocrData: {
-        documentNumber: 'MH-04-20180019283',
-        documentType: 'driving_license',
-        fullName: 'AMIT VERMA',
-        dateOfBirth: '05/06/1996',
-        gender: 'MALE',
-        issueDate: '12/04/2018',
-        expiryDate: '11/04/2038'
+        documentNumber: 'V10298492',
+        documentType: 'visa',
+        fullName: 'EMMA WATSON',
+        dateOfBirth: '15/04/1990',
+        gender: 'FEMALE',
+        issueDate: '01/02/2024',
+        expiryDate: '01/02/2029'
       },
       securityChecks: [
-        { id: 'sc-1', name: 'Transport Hologram Kinetic Optical Analysis', category: 'security_feature', status: 'FAIL', score: 32, message: 'Flat color gradient detected instead of multi-angle kinetic diffraction.' },
-        { id: 'sc-2', name: 'Micro-print Text Resolution', category: 'security_feature', status: 'WARNING', score: 58, message: 'Microtext under state seal is blurred and lacks vector sharpness.' },
-        { id: 'sc-3', name: 'Sarathi Database ID Format Schema', category: 'data_integrity', status: 'PASS', score: 94, message: 'Complies with MoRTH Sarathi DL registration schema.' },
-        { id: 'sc-4', name: 'Photo ID Integration', category: 'tamper', status: 'PASS', score: 85, message: 'No photo splicing detected; appears to be a direct synthetic print.' }
+        { id: 'sc-1', name: 'ICAO MRV-A Checksum Mathematical Parity', category: 'data_integrity', status: 'PASS', score: 99, message: 'All numeric 7-3-1 weight check digits validate with zero errors.' },
+        { id: 'sc-2', name: 'Consular Security Hologram & Intaglio Print', category: 'security_feature', status: 'PASS', score: 95, message: 'Intaglio tactile texture and diffraction spectrum confirmed.' },
+        { id: 'sc-3', name: 'Font Typography & Kerning Standards', category: 'font', status: 'PASS', score: 98, message: 'Official consular OCR-B typeface with consistent baseline alignment.' },
+        { id: 'sc-4', name: 'Photo ID Integration & Anti-Tamper Edge', category: 'tamper', status: 'PASS', score: 96, message: 'No photo splicing detected; continuous security substrate.' }
       ],
       boundingBoxes: [
-        { id: 'bb-1', label: 'Counterfeit Holographic Seal', type: 'watermark', confidence: 0.92, severity: 'high', x: 80, y: 21, width: 14, height: 23, description: 'Lacks multi-spectral optical diffraction properties' }
+        { id: 'bb-1', label: 'Consular Seal (Verified)', type: 'watermark', confidence: 0.98, severity: 'low', x: 80, y: 21, width: 14, height: 23, description: 'High-definition micro-line seal structure confirmed' },
+        { id: 'bb-2', label: 'MRV-A Optical Zone', type: 'ocr_field', confidence: 0.99, severity: 'low', x: 10, y: 78, width: 80, height: 18, description: 'ICAO 9303 Part 7 compliance verified' }
       ],
       faceMatch: {
         performed: true,
-        matchScore: 89.6,
+        matchScore: 95.8,
         status: 'MATCH',
         livenessDetected: true,
-        spoofRiskScore: 5.4,
+        spoofRiskScore: 2.9,
         landmarksVerified: true,
-        notes: 'Selfie matched the photo on the document, but document physical security is suspect.'
+        notes: 'Selfie matched the photograph on the visa document with high confidence.'
       },
       forensicHash: 'SHA256:6e1892a01948bc12984a9182379a081298374a91b928347102938472910ab384',
       modelUsed: 'gemini-3.8-flash (Multimodal Document Forensics)',
-      executionTimeMs: 460
+      executionTimeMs: 440
     }
   }
 ];

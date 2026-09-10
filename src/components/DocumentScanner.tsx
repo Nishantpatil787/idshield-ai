@@ -216,12 +216,10 @@ export const DocumentScanner: React.FC<DocumentScannerProps> = ({
                 onChange={(e) => setDocumentType(e.target.value as DocumentType)}
                 className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               >
-                <option value="aadhaar">UIDAI Aadhaar Card</option>
-                <option value="pan">Income Tax PAN Card</option>
-                <option value="passport">Indian Passport</option>
-                <option value="driving_license">Transport Driving Licence</option>
-                <option value="voter_id">Election Commission Voter ID</option>
-                <option value="custom_id">Custom / Other Government ID</option>
+                <option value="passport">Passport (ICAO 9303 Biometric)</option>
+                <option value="visa">Visa / Travel Visa (Consular MRV)</option>
+                <option value="national_id">National ID Card</option>
+                <option value="aadhaar">National ID (Aadhaar / Smart Card)</option>
               </select>
             </div>
 

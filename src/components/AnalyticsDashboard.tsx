@@ -13,10 +13,9 @@ export const AnalyticsDashboard: React.FC = () => {
   ];
 
   const docDistribution = [
-    { type: 'Aadhaar Cards', share: 44, validRate: 92 },
-    { type: 'PAN Cards', share: 31, validRate: 78 },
-    { type: 'Indian Passports', share: 15, validRate: 85 },
-    { type: 'Driving Licences', share: 10, validRate: 71 },
+    { type: 'National IDs', share: 48, validRate: 92 },
+    { type: 'Passports', share: 32, validRate: 88 },
+    { type: 'Visas', share: 20, validRate: 81 },
   ];
 
   return (

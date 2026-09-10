@@ -69,9 +69,7 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
   const categories: Array<{ id: DocumentCategory; label: string; desc: string; icon: React.FC<{ className?: string }> }> = [
     { id: 'passport', label: 'Passport', desc: 'ICAO 9303 Standard Biometric / Machine Readable', icon: Globe },
     { id: 'visa', label: 'Visa / e-Visa', desc: 'Electronic Entry Clearance or Consular Visa', icon: FileCheck },
-    { id: 'national_id', label: 'National ID', desc: 'State Identity Card with Hologram / Chip', icon: CreditCard },
-    { id: 'driving_licence', label: 'Driving Licence', desc: 'Physical / Digital Driver Authorization', icon: FileText },
-    { id: 'permit', label: 'Travel Permit', desc: 'Cross-Border or Temporary Resident Permit', icon: FileCode },
+    { id: 'national_id', label: 'National ID', desc: 'Official Government Smart Identity Card', icon: CreditCard },
   ];
 
   const handleDrag = (e: React.DragEvent) => {
@@ -125,7 +123,7 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
     const newDoc: SupportingDocState = {
       id: `SUP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       category: cat,
-      documentNumber: cat === 'visa' ? `VS-${Math.floor(1000000 + Math.random() * 8999999)}` : `PRM-${Math.floor(100000 + Math.random() * 899999)}`,
+      documentNumber: cat === 'visa' ? `VS-${Math.floor(1000000 + Math.random() * 8999999)}` : `ID-${Math.floor(100000 + Math.random() * 899999)}`,
       associatedPassportNumber: documentNumber || '',
       fullName: fullName || '',
       nationality: nationality || '',
@@ -133,7 +131,7 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
       issueDate: '2024-01-15',
       expiryDate: '2027-01-15',
       gender: 'M',
-      visaType: cat === 'visa' ? 'Tourist / Business' : 'Resident Transit',
+      visaType: cat === 'visa' ? 'Tourist / Business' : 'National Identification',
     };
     setSupportingDocs([...supportingDocs, newDoc]);
   };
@@ -308,7 +306,7 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
       const supportingPayload: SupportingDocumentPayload[] = supportingDocs.map(doc => ({
         id: doc.id,
         category: doc.category,
-        categoryLabel: doc.category === 'visa' ? 'Electronic Travel Visa' : doc.category === 'permit' ? 'Border Permit' : 'Supporting Document',
+        categoryLabel: doc.category === 'visa' ? 'Electronic Travel Visa' : doc.category === 'national_id' ? 'National ID Card' : 'Supporting Document',
         documentNumber: doc.documentNumber,
         associatedPassportNumber: doc.associatedPassportNumber || undefined,
         fullName: doc.fullName,
@@ -358,7 +356,7 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
               </span>
             </h1>
             <p className="text-xs font-mono text-slate-400 mt-1">
-              Upload primary identity credential scans and optionally attach supporting visas or permits for cross-document consistency verification.
+              Upload primary identity credential scans (Passport, Visa, or National ID) and optionally attach supporting visas or identity cards for cross-document consistency verification.
             </p>
           </div>
         </div>
@@ -625,7 +623,7 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
                 <span>Supporting Credentials & Cross-Document Intake</span>
               </label>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Attach accompanying travel visas, entry permits, or secondary IDs to evaluate multi-document identity consistency.
+                Attach accompanying travel visas or national identity cards to evaluate multi-document identity consistency.
               </p>
             </div>
 
@@ -640,11 +638,11 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => handleAddSupportingDoc('permit')}
+                onClick={() => handleAddSupportingDoc('national_id')}
                 className="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Add Permit</span>
+                <span>+ Add National ID</span>
               </button>
             </div>
           </div>
@@ -653,7 +651,7 @@ export const NewScreeningPage: React.FC<NewScreeningPageProps> = ({
             <div className="p-4 rounded-lg bg-slate-950/50 border border-slate-800/80 text-center space-y-1.5 text-xs">
               <span className="text-slate-400 font-semibold block">No Supporting Documents Attached</span>
               <p className="text-[11px] text-slate-500 max-w-lg mx-auto leading-relaxed">
-                Single-document screening will be performed. Click <strong>+ Add Visa</strong> or <strong>+ Add Permit</strong> (or choose a preset above) to enable Cross-Document Consistency validation.
+                Single-document screening will be performed. Click <strong>+ Add Visa</strong> or <strong>+ Add National ID</strong> to enable Cross-Document Consistency validation.
               </p>
             </div>
           ) : (

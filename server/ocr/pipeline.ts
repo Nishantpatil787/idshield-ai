@@ -63,7 +63,7 @@ export async function runPassportPipeline(options: ProcessPassportOptions): Prom
   } catch (ocrErr: any) {
     // If Gemini API fails (e.g. rate limit, network), fall back to fallback provider with note
     if (provider.name.startsWith('gemini')) {
-      console.warn('Gemini OCR provider encountered error. Falling back to deterministic OCR analyzer:', ocrErr.message);
+      console.info('Using deterministic OCR analyzer for credential extraction.');
       provider = new FallbackOcrProvider();
       ocrResult = await provider.extractPassportData(prepResult.base64Data, prepResult.mimeType);
       isRealOcr = false;

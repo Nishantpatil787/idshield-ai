@@ -204,25 +204,49 @@ app.post('/api/verify-document', async (req, res) => {
       return res.json(fallbackReport);
     }
 
-    // Process with Gemini 3.8 Flash Multimodal API
+    // Process with Gemini Multimodal API (with SVG format handling)
     const docData = extractBase64AndMime(documentImage);
-    const parts: any[] = [
-      {
+    const parts: any[] = [];
+
+    if (docData.mimeType === 'image/svg+xml' || docData.mimeType === 'image/svg') {
+      let svgText = '';
+      try {
+        svgText = Buffer.from(docData.base64, 'base64').toString('utf-8');
+      } catch {
+        svgText = docData.base64;
+      }
+      parts.push({
+        text: `[DOCUMENT CONTENT - VECTOR SVG SPECIMEN]:\n\`\`\`xml\n${svgText}\n\`\`\``,
+      });
+    } else {
+      parts.push({
         inlineData: {
-          mimeType: docData.mimeType,
+          mimeType: docData.mimeType === 'image/jpg' ? 'image/jpeg' : docData.mimeType,
           data: docData.base64,
         },
-      },
-    ];
+      });
+    }
 
     if (selfieImage) {
       const selfieData = extractBase64AndMime(selfieImage);
-      parts.push({
-        inlineData: {
-          mimeType: selfieData.mimeType,
-          data: selfieData.base64,
-        },
-      });
+      if (selfieData.mimeType === 'image/svg+xml' || selfieData.mimeType === 'image/svg') {
+        let selfieSvg = '';
+        try {
+          selfieSvg = Buffer.from(selfieData.base64, 'base64').toString('utf-8');
+        } catch {
+          selfieSvg = selfieData.base64;
+        }
+        parts.push({
+          text: `[REFERENCE SELFIE PHOTO - VECTOR SVG]:\n\`\`\`xml\n${selfieSvg}\n\`\`\``,
+        });
+      } else {
+        parts.push({
+          inlineData: {
+            mimeType: selfieData.mimeType === 'image/jpg' ? 'image/jpeg' : selfieData.mimeType,
+            data: selfieData.base64,
+          },
+        });
+      }
     }
 
     const prompt = `You are IDShield AI, a world-class forensic document fraud analysis and identity verification engine built for Smart India Hackathon (SIH).
@@ -241,115 +265,144 @@ Output strictly valid JSON conforming to the requested schema.`;
 
     parts.push({ text: prompt });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: { parts },
-      config: {
-        systemInstruction:
-          'You are a rigorous forensic document inspection AI. Detect forgery, tampering, and font anomalies with precision. Output only JSON.',
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            authenticityScore: {
-              type: Type.NUMBER,
-              description: 'Authenticity score from 0 to 100',
-            },
-            overallStatus: {
-              type: Type.STRING,
-              description: 'PASSED | SUSPICIOUS | REJECTED | MANUAL_REVIEW',
-            },
-            riskLevel: {
-              type: Type.STRING,
-              description: 'LOW | MODERATE | HIGH | CRITICAL_FRAUD',
-            },
-            summary: {
-              type: Type.STRING,
-              description: 'Clear forensic analysis summary',
-            },
-            tamperingDetected: {
-              type: Type.BOOLEAN,
-              description: 'True if any tampering was detected',
-            },
-            ocrData: {
-              type: Type.OBJECT,
-              properties: {
-                documentNumber: { type: Type.STRING },
-                documentType: { type: Type.STRING },
-                fullName: { type: Type.STRING },
-                dateOfBirth: { type: Type.STRING },
-                gender: { type: Type.STRING },
-                fatherOrSpouseName: { type: Type.STRING },
-                address: { type: Type.STRING },
-                issueDate: { type: Type.STRING },
-                expiryDate: { type: Type.STRING },
-                qrCodeData: { type: Type.STRING },
-                qrDataMatchesOcr: { type: Type.BOOLEAN },
-              },
-            },
-            securityChecks: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  name: { type: Type.STRING },
-                  category: { type: Type.STRING },
-                  status: { type: Type.STRING }, // PASS | WARNING | FAIL
-                  score: { type: Type.NUMBER },
-                  message: { type: Type.STRING },
-                  technicalDetails: { type: Type.STRING },
-                },
-                required: ['id', 'name', 'category', 'status', 'score', 'message'],
-              },
-            },
-            boundingBoxes: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  label: { type: Type.STRING },
-                  type: { type: Type.STRING },
-                  confidence: { type: Type.NUMBER },
-                  severity: { type: Type.STRING }, // low | medium | high
-                  x: { type: Type.NUMBER },
-                  y: { type: Type.NUMBER },
-                  width: { type: Type.NUMBER },
-                  height: { type: Type.NUMBER },
-                  description: { type: Type.STRING },
-                },
-                required: ['id', 'label', 'type', 'confidence', 'severity', 'x', 'y', 'width', 'height', 'description'],
-              },
-            },
-            faceMatch: {
-              type: Type.OBJECT,
-              properties: {
-                performed: { type: Type.BOOLEAN },
-                matchScore: { type: Type.NUMBER },
-                status: { type: Type.STRING },
-                livenessDetected: { type: Type.BOOLEAN },
-                spoofRiskScore: { type: Type.NUMBER },
-                landmarksVerified: { type: Type.BOOLEAN },
-                notes: { type: Type.STRING },
-              },
-            },
-          },
-          required: [
-            'authenticityScore',
-            'overallStatus',
-            'riskLevel',
-            'summary',
-            'tamperingDetected',
-            'ocrData',
-            'securityChecks',
-            'boundingBoxes',
-          ],
-        },
-      },
-    });
+    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+    let response: any = null;
+    let modelUsedName = 'gemini-3.8-flash';
 
-    const text = response.text || '{}';
+    for (const model of candidateModels) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          response = await ai.models.generateContent({
+            model,
+            contents: { parts },
+            config: {
+              systemInstruction:
+                'You are a rigorous forensic document inspection AI. Detect forgery, tampering, and font anomalies with precision. Output only JSON.',
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  authenticityScore: {
+                    type: Type.NUMBER,
+                    description: 'Authenticity score from 0 to 100',
+                  },
+                  overallStatus: {
+                    type: Type.STRING,
+                    description: 'PASSED | SUSPICIOUS | REJECTED | MANUAL_REVIEW',
+                  },
+                  riskLevel: {
+                    type: Type.STRING,
+                    description: 'LOW | MODERATE | HIGH | CRITICAL_FRAUD',
+                  },
+                  summary: {
+                    type: Type.STRING,
+                    description: 'Clear forensic analysis summary',
+                  },
+                  tamperingDetected: {
+                    type: Type.BOOLEAN,
+                    description: 'True if any tampering was detected',
+                  },
+                  ocrData: {
+                    type: Type.OBJECT,
+                    properties: {
+                      documentNumber: { type: Type.STRING },
+                      documentType: { type: Type.STRING },
+                      fullName: { type: Type.STRING },
+                      dateOfBirth: { type: Type.STRING },
+                      gender: { type: Type.STRING },
+                      fatherOrSpouseName: { type: Type.STRING },
+                      address: { type: Type.STRING },
+                      issueDate: { type: Type.STRING },
+                      expiryDate: { type: Type.STRING },
+                      qrCodeData: { type: Type.STRING },
+                      qrDataMatchesOcr: { type: Type.BOOLEAN },
+                    },
+                  },
+                  securityChecks: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        id: { type: Type.STRING },
+                        name: { type: Type.STRING },
+                        category: { type: Type.STRING },
+                        status: { type: Type.STRING }, // PASS | WARNING | FAIL
+                        score: { type: Type.NUMBER },
+                        message: { type: Type.STRING },
+                        technicalDetails: { type: Type.STRING },
+                      },
+                      required: ['id', 'name', 'category', 'status', 'score', 'message'],
+                    },
+                  },
+                  boundingBoxes: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        id: { type: Type.STRING },
+                        label: { type: Type.STRING },
+                        type: { type: Type.STRING },
+                        confidence: { type: Type.NUMBER },
+                        severity: { type: Type.STRING }, // low | medium | high
+                        x: { type: Type.NUMBER },
+                        y: { type: Type.NUMBER },
+                        width: { type: Type.NUMBER },
+                        height: { type: Type.NUMBER },
+                        description: { type: Type.STRING },
+                      },
+                      required: ['id', 'label', 'type', 'confidence', 'severity', 'x', 'y', 'width', 'height', 'description'],
+                    },
+                  },
+                  faceMatch: {
+                    type: Type.OBJECT,
+                    properties: {
+                      performed: { type: Type.BOOLEAN },
+                      matchScore: { type: Type.NUMBER },
+                      status: { type: Type.STRING },
+                      livenessDetected: { type: Type.BOOLEAN },
+                      spoofRiskScore: { type: Type.NUMBER },
+                      landmarksVerified: { type: Type.BOOLEAN },
+                      notes: { type: Type.STRING },
+                    },
+                  },
+                },
+                required: [
+                  'authenticityScore',
+                  'overallStatus',
+                  'riskLevel',
+                  'summary',
+                  'tamperingDetected',
+                  'ocrData',
+                  'securityChecks',
+                  'boundingBoxes',
+                ],
+              },
+            },
+          });
+
+          if (response && response.text) {
+            modelUsedName = model;
+            break;
+          }
+        } catch (err: any) {
+          const errMsg = String(err?.message || '');
+          const isTransient =
+            errMsg.includes('503') ||
+            errMsg.includes('high demand') ||
+            errMsg.includes('UNAVAILABLE') ||
+            errMsg.includes('429') ||
+            err?.status === 'UNAVAILABLE';
+          if (isTransient && attempt === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            continue;
+          }
+          break;
+        }
+      }
+      if (response && response.text) break;
+    }
+
+    const text = response?.text || '{}';
     let parsed: any;
     try {
       parsed = JSON.parse(text);
@@ -384,7 +437,7 @@ Output strictly valid JSON conforming to the requested schema.`;
         notes: 'Facial landmarks match ID portrait.',
       } : undefined),
       forensicHash: `SHA256:${crypto.createHash('sha256').update(docData.base64.slice(0, 500) + Date.now()).digest('hex')}`,
-      modelUsed: 'gemini-3.8-flash (Multimodal Document Forensics)',
+      modelUsed: `${modelUsedName} (Multimodal Document Forensics)`,
       executionTimeMs: Date.now() - startTime,
     };
 

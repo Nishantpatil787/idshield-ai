@@ -115,7 +115,7 @@ export const BatchQueue: React.FC<BatchQueueProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `idshield_batch_audit_${Date.now()}.csv`);
+    link.setAttribute('download', `docshield_batch_audit_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

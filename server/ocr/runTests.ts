@@ -181,6 +181,12 @@ export function runAllMrzTests(): { passed: number; failed: number; total: numbe
   assert(validImagePrep.valid === true, 'Valid PNG base64 accepted');
   assert(validImagePrep.mimeType === 'image/png', 'MIME type inferred as image/png');
 
+  // Valid SVG document (data URI and raw SVG)
+  const dummySvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><text>P&lt;UTOERIKSSON&lt;&lt;ANNA</text></svg>';
+  const validSvgPrep = validateAndPreprocessImage(dummySvg, 'specimen.svg');
+  assert(validSvgPrep.valid === true, 'Valid SVG document accepted');
+  assert(validSvgPrep.mimeType === 'image/svg+xml', 'MIME type inferred as image/svg+xml');
+
   // Unsupported format (e.g. text/plain or executable)
   const badMimePrep = validateAndPreprocessImage('data:application/pdf;base64,JVBERi0xLjQKJc==', 'document.pdf');
   assert(badMimePrep.valid === false, 'PDF/non-image format rejected gracefully');

@@ -94,7 +94,7 @@ export const ConsoleLayout: React.FC<ConsoleLayoutProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm tracking-tight text-white font-mono">
-                  IDSHIELD<span className="text-sky-400">.AI</span>
+                  DOCSHIELD
                 </span>
                 <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-950/80 text-sky-300 border border-sky-800/80 uppercase font-semibold">
                   PROTOTYPE
@@ -204,19 +204,15 @@ export const ConsoleLayout: React.FC<ConsoleLayoutProps> = ({
                 </li>
                 <li className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-                  Visas & e-Authorizations
+                  Passports (ICAO 9303)
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                  Visas & Travel Authorizations
                 </li>
                 <li className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
                   National ID Cards
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-                  Driving Licences
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-                  Border Permits
                 </li>
               </ul>
             </div>

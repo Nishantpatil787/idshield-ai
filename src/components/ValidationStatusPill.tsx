@@ -15,29 +15,29 @@ export const ValidationStatusPill: React.FC<ValidationStatusPillProps> = ({
 }) => {
   const configs = {
     PASS: {
-      bg: 'bg-emerald-950/50 border-emerald-800/80 text-emerald-400',
+      bg: 'bg-emerald-50 border-emerald-200 text-emerald-700',
       icon: CheckCircle2,
-      defaultLabel: 'PASS',
+      defaultLabel: 'Verified',
     },
     WARNING: {
-      bg: 'bg-amber-950/50 border-amber-800/80 text-amber-400',
+      bg: 'bg-amber-50 border-amber-200 text-amber-700',
       icon: AlertTriangle,
-      defaultLabel: 'WARNING',
+      defaultLabel: 'Review',
     },
     FAIL: {
-      bg: 'bg-rose-950/50 border-rose-800/80 text-rose-400',
+      bg: 'bg-rose-50 border-rose-200 text-rose-700',
       icon: XCircle,
-      defaultLabel: 'FAIL',
+      defaultLabel: 'Failed',
     },
     INCONCLUSIVE: {
-      bg: 'bg-slate-800 border-slate-700 text-slate-400',
+      bg: 'bg-slate-100 border-slate-200 text-slate-600',
       icon: HelpCircle,
-      defaultLabel: 'INCONCLUSIVE',
+      defaultLabel: 'Inconclusive',
     },
     NOT_CHECKED: {
-      bg: 'bg-slate-900 border-slate-800 text-slate-500',
+      bg: 'bg-slate-100 border-slate-200 text-slate-500',
       icon: HelpCircle,
-      defaultLabel: 'NOT CHECKED',
+      defaultLabel: 'Not Checked',
     },
   };
 
@@ -47,7 +47,7 @@ export const ValidationStatusPill: React.FC<ValidationStatusPillProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-semibold border ${current.bg}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${current.bg}`}
     >
       {showIcon && <Icon className="w-3 h-3 flex-shrink-0" />}
       <span>{text}</span>

@@ -1,125 +1,152 @@
-import React from 'react';
-import { ShieldCheck, ShieldAlert, Cpu, Sliders, FileSpreadsheet, BarChart3, Info, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  Menu, 
+  X, 
+  User, 
+  ArrowRight, 
+  FileCheck2,
+  HelpCircle,
+  History as HistoryIcon,
+  Home as HomeIcon,
+  Info
+} from 'lucide-react';
+import { DisclaimerBanner } from './DisclaimerBanner';
+import { DocShieldLogo } from './DocShieldLogo';
+
+export type NavPage = 'home' | 'verify' | 'how_it_works' | 'history' | 'about';
 
 interface NavbarProps {
-  activeTab: 'scanner' | 'batch' | 'analytics' | 'architecture';
-  setActiveTab: (tab: 'scanner' | 'batch' | 'analytics' | 'architecture') => void;
-  onOpenRules: () => void;
-  onOpenArch: () => void;
-  hasGeminiKey: boolean;
+  currentPage: NavPage;
+  onNavigate: (page: NavPage) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  activeTab,
-  setActiveTab,
-  onOpenRules,
-  onOpenArch,
-  hasGeminiKey,
+  currentPage,
+  onNavigate,
 }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks: Array<{ id: NavPage; label: string; icon: React.FC<{ className?: string }> }> = [
+    { id: 'home', label: 'Home', icon: HomeIcon },
+    { id: 'verify', label: 'Verify Document', icon: FileCheck2 },
+    { id: 'how_it_works', label: 'How It Works', icon: HelpCircle },
+    { id: 'history', label: 'History', icon: HistoryIcon },
+    { id: 'about', label: 'About', icon: Info },
+  ];
+
+  const handleNav = (page: NavPage) => {
+    onNavigate(page);
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40">
+    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-xs">
+      {/* Top Academic Prototype Micro-bar */}
+      <DisclaimerBanner compact />
+
+      {/* Main Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Brand Logo & Tag */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('scanner')}>
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-400/30">
-              <ShieldCheck className="w-6 h-6 text-white animate-pulse" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-slate-950"></div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                  IDShield AI
-                </span>
-                <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  SIH Forensic Edition
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-mono hidden sm:block">
-                Document Tampering & Identity Fraud Detection
-              </p>
-            </div>
+        <div className="flex items-center justify-between h-16 sm:h-18">
+          {/* Brand Logo */}
+          <div 
+            onClick={() => handleNav('home')}
+            className="cursor-pointer group select-none"
+            title="DocShield Home"
+          >
+            <DocShieldLogo size="md" showText={true} />
           </div>
 
-          {/* Center Navigation Tabs */}
-          <nav className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800/80">
-            <button
-              id="nav-tab-scanner"
-              onClick={() => setActiveTab('scanner')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'scanner'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Cpu className="w-3.5 h-3.5" />
-              <span>Inspect & Verify</span>
-            </button>
-
-            <button
-              id="nav-tab-batch"
-              onClick={() => setActiveTab('batch')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'batch'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Batch Queue</span>
-            </button>
-
-            <button
-              id="nav-tab-analytics"
-              onClick={() => setActiveTab('analytics')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'analytics'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Fraud Analytics</span>
-            </button>
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+            {navLinks.map((item) => {
+              const isActive = currentPage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNav(item.id)}
+                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? 'text-blue-600 bg-blue-50/80 font-semibold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </nav>
 
-          {/* Right System Indicators & Actions */}
-          <div className="flex items-center gap-2.5">
-            {/* AI Engine Status Pill */}
-            <div
-              title={hasGeminiKey ? 'Multimodal Gemini 3.8 Flash Engine Connected' : 'Running on Internal Forensic Rules Engine'}
-              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium ${
-                hasGeminiKey
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                  : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-              }`}
+          {/* Desktop Right Actions */}
+          <div className="hidden md:flex items-center gap-3">
+            {/* Officer Profile Badge */}
+            <div 
+              title="Authorized Verification Officer"
+              className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-200/70 cursor-pointer transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
-              <span>{hasGeminiKey ? 'Gemini 3.8 Flash' : 'Forensic Vision Engine'}</span>
+              <User className="w-4 h-4" />
             </div>
 
-            {/* Threshold Rules Button */}
+            {/* Primary Action Button */}
             <button
-              id="btn-rules-modal"
-              onClick={onOpenRules}
-              className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors"
-              title="Risk & Fraud Detection Rules"
+              onClick={() => handleNav('verify')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm shadow-blue-500/20 hover:shadow-md transition-all cursor-pointer"
             >
-              <Sliders className="w-4 h-4" />
+              <span>Verify Document</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
+          </div>
 
-            {/* Architecture / SIH Info Button */}
+          {/* Mobile Menu Button */}
+          <div className="flex items-center gap-2 md:hidden">
             <button
-              id="btn-arch-modal"
-              onClick={onOpenArch}
-              className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors"
-              title="SIH Architecture & Problem Statement"
+              onClick={() => handleNav('verify')}
+              className="px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-semibold"
             >
-              <Info className="w-4 h-4" />
+              Verify
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              aria-label="Toggle Navigation"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-1 shadow-lg animate-in slide-in-from-top-2">
+          {navLinks.map((item) => {
+            const isActive = currentPage === item.id;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNav(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'text-blue-600 bg-blue-50 font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <User className="w-3.5 h-3.5" />
+              <span>Officer Console</span>
+            </div>
+            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+              Academic Prototype
+            </span>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

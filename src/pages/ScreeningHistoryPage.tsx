@@ -4,19 +4,22 @@ import {
   Filter, 
   Download, 
   RefreshCw, 
-  ArrowUpDown, 
   Calendar, 
   ChevronRight, 
   FileText,
   RotateCcw,
   SlidersHorizontal,
-  X
+  X,
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  ShieldAlert,
+  ArrowRight
 } from 'lucide-react';
 import { ScreeningRecord, DocumentCategory, RiskLevel, ScreeningStatus } from '../types';
 import { ScreeningService } from '../services/api';
 import { RiskBadge } from '../components/RiskBadge';
 import { StatusBadge } from '../components/StatusBadge';
-import { DisclaimerBanner } from '../components/DisclaimerBanner';
 
 interface ScreeningHistoryPageProps {
   onViewScreening: (screeningId: string) => void;
@@ -68,26 +71,23 @@ export const ScreeningHistoryPage: React.FC<ScreeningHistoryPageProps> = ({
   };
 
   const handleExportCsv = () => {
-    const headers = ['ScreeningID', 'Timestamp', 'Category', 'DocNumber', 'FullName', 'Country', 'RiskLevel', 'RiskScore', 'Status', 'SuppDocsCount', 'CrossDocStatus'];
+    const headers = ['ScreeningID', 'Timestamp', 'Category', 'DocNumber', 'FullName', 'RiskLevel', 'RiskScore', 'Status'];
     const rows = screenings.map((s) => [
       s.screeningId,
       s.timestamp,
       s.document.category,
       s.document.documentNumber,
       `"${s.document.fullName}"`,
-      s.document.countryCode,
       s.riskAssessment.riskLevel,
       s.riskAssessment.riskScore,
       s.status,
-      s.supportingDocuments ? s.supportingDocuments.length : 0,
-      s.crossDocumentData ? s.crossDocumentData.overall_status : 'N/A'
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `idshield_screening_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `docshield_screening_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -102,34 +102,36 @@ export const ScreeningHistoryPage: React.FC<ScreeningHistoryPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            <span>SCREENING HISTORY & AUDIT LEDGER</span>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-              AUDIT LOGS
-            </span>
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span>Audit & Verification</span>
+            <span>&gt;</span>
+            <span className="text-blue-600">History Ledger</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+            Verification History Ledger
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Complete sequential record of all processed credentials, risk outcomes, and operator reviews.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Sequential record of all analyzed credentials, risk assessments, and operator audits.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={handleExportCsv}
             disabled={screenings.length === 0}
-            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export CSV</span>
           </button>
           <button
             onClick={handleResetDemoData}
-            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            title="Reload initial demo dataset"
+            className="px-3.5 py-2 rounded-full bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 border border-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Reload demo dataset"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Reset Demo Data</span>
@@ -137,20 +139,18 @@ export const ScreeningHistoryPage: React.FC<ScreeningHistoryPageProps> = ({
         </div>
       </div>
 
-      <DisclaimerBanner />
-
       {/* Filter and Search Bar */}
-      <div className="bg-slate-900/70 border border-slate-800 rounded-lg p-4 space-y-3">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
         <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-3">
           {/* Search Input */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Holder Name, Doc Number, ID, or Country..."
-              className="w-full bg-slate-950 border border-slate-800 rounded pl-9 pr-8 py-2 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-sky-500"
+              placeholder="Search by Holder Name, Doc Number, ID, or Category..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-8 py-2.5 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             />
             {searchQuery && (
               <button
@@ -159,177 +159,141 @@ export const ScreeningHistoryPage: React.FC<ScreeningHistoryPageProps> = ({
                   setSearchQuery('');
                   fetchScreenings();
                 }}
-                className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300"
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
 
           <button
             type="submit"
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-xs font-bold transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
           >
-            Filter
+            Search
           </button>
         </form>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-800/80 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-slate-500 font-semibold uppercase">Category:</span>
-            {(['ALL', 'passport', 'visa', 'national_id', 'driving_licence', 'permit'] as const).map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-                  selectedCategory === cat
-                    ? 'bg-sky-950 text-sky-300 border border-sky-800 font-bold'
-                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
-                }`}
-              >
-                {cat === 'ALL' ? 'All Types' : cat.replace('_', ' ').toUpperCase()}
-              </button>
-            ))}
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 font-medium">Category:</span>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value as any)}
+              className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500"
+            >
+              <option value="ALL">All Documents</option>
+              <option value="passport">Passport</option>
+              <option value="visa">Visa</option>
+              <option value="national_id">National ID</option>
+            </select>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-500 font-semibold uppercase">Risk:</span>
-            {(['ALL', 'LOW', 'MEDIUM', 'HIGH'] as const).map((lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setSelectedRisk(lvl)}
-                className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-                  selectedRisk === lvl
-                    ? 'bg-slate-800 text-slate-100 border border-slate-600 font-bold'
-                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
-                }`}
-              >
-                {lvl}
-              </button>
-            ))}
+            <span className="text-slate-400 font-medium">Risk:</span>
+            <select
+              value={selectedRisk}
+              onChange={(e) => setSelectedRisk(e.target.value as any)}
+              className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500"
+            >
+              <option value="ALL">All Risk Levels</option>
+              <option value="LOW">Low Risk</option>
+              <option value="MEDIUM">Medium / Needs Review</option>
+              <option value="HIGH">High / Suspicious</option>
+            </select>
           </div>
+
+          <button
+            onClick={handleResetFilters}
+            className="text-xs text-slate-500 hover:text-blue-600 font-medium ml-auto"
+          >
+            Clear Filters
+          </button>
         </div>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left font-mono text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-950 text-slate-400 text-[11px] border-b border-slate-800">
-                <th className="py-2.5 px-4 font-semibold uppercase">Screening ID</th>
-                <th className="py-2.5 px-4 font-semibold uppercase">Timestamp</th>
-                <th className="py-2.5 px-4 font-semibold uppercase">Document</th>
-                <th className="py-2.5 px-4 font-semibold uppercase">Holder Name</th>
-                <th className="py-2.5 px-4 font-semibold uppercase">Country</th>
-                <th className="py-2.5 px-4 font-semibold uppercase">Risk Level</th>
-                <th className="py-2.5 px-4 font-semibold uppercase">Status</th>
-                <th className="py-2.5 px-4 font-semibold uppercase text-right">Details</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {loading ? (
+      {/* Results Table */}
+      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+        {loading ? (
+          <div className="py-20 text-center space-y-3">
+            <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
+            <p className="text-xs text-slate-500">Loading ledger records...</p>
+          </div>
+        ) : screenings.length === 0 ? (
+          <div className="py-16 text-center space-y-3">
+            <FileText className="w-10 h-10 text-slate-300 mx-auto" />
+            <div className="text-sm font-bold text-slate-800">No screening records found</div>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              No verification entries match your filter criteria or no documents have been screened yet.
+            </p>
+            <button
+              onClick={onNavigateToNew}
+              className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+            >
+              Verify First Document →
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
-                    <div className="inline-block w-4 h-4 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mb-2" />
-                    <p>Loading screening records...</p>
-                  </td>
+                  <th className="px-6 py-3.5">Screening ID</th>
+                  <th className="px-6 py-3.5">Holder & Document</th>
+                  <th className="px-6 py-3.5">Category</th>
+                  <th className="px-6 py-3.5">Risk Level</th>
+                  <th className="px-6 py-3.5">Status</th>
+                  <th className="px-6 py-3.5">Timestamp</th>
+                  <th className="px-6 py-3.5 text-right">Action</th>
                 </tr>
-              ) : screenings.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
-                    <FileText className="w-8 h-8 mx-auto opacity-30 mb-2" />
-                    <p className="font-semibold text-slate-300 text-sm">No screening records matched your filters.</p>
-                    <button
-                      onClick={handleResetFilters}
-                      className="mt-2 text-xs text-sky-400 hover:underline"
-                    >
-                      Clear all search & risk filters
-                    </button>
-                  </td>
-                </tr>
-              ) : (
-                screenings.map((rec) => (
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {screenings.map((rec) => (
                   <tr
                     key={rec.screeningId}
-                    className="hover:bg-slate-800/40 transition-colors"
+                    onClick={() => onViewScreening(rec.screeningId)}
+                    className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
                   >
-                    <td className="py-3 px-4 text-sky-400 font-bold whitespace-nowrap">
+                    <td className="px-6 py-4 font-mono font-medium text-slate-700 whitespace-nowrap">
                       {rec.screeningId}
                     </td>
-                    <td className="py-3 px-4 text-slate-400 whitespace-nowrap text-[11px]">
-                      {new Date(rec.timestamp).toLocaleString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <div className="text-slate-200 font-semibold flex items-center gap-1.5">
-                        <span>{rec.document.documentNumber}</span>
-                        {rec.supportingDocuments && rec.supportingDocuments.length > 0 && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800 font-bold">
-                            +{rec.supportingDocuments.length} SUPP
-                          </span>
-                        )}
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        {rec.document.fullName}
                       </div>
-                      <div className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5">
-                        <span>{rec.document.categoryLabel}</span>
-                        {rec.crossDocumentData && (
-                          <span
-                            className={`text-[9px] px-1 py-0.2 rounded font-mono font-bold ${
-                              rec.crossDocumentData.overall_status === 'CONSISTENT'
-                                ? 'text-emerald-400 bg-emerald-950/80 border border-emerald-800'
-                                : 'text-amber-400 bg-amber-950/80 border border-amber-800'
-                            }`}
-                          >
-                            {rec.crossDocumentData.overall_status === 'CONSISTENT' ? 'PARITY OK' : 'X-DOC REVIEW'}
-                          </span>
-                        )}
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        {rec.document.documentNumber}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-200 font-semibold whitespace-nowrap">
-                      {rec.document.fullName}
+                    <td className="px-6 py-4 uppercase font-semibold text-slate-600 text-[11px]">
+                      {rec.document.category.replace('_', ' ')}
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className="text-slate-300">{rec.document.countryCode}</span>
-                      <span className="text-[10px] text-slate-500 block truncate max-w-[120px]">
-                        {rec.document.nationality}
-                      </span>
+                    <td className="px-6 py-4">
+                      <RiskBadge level={rec.riskAssessment.riskLevel} score={rec.riskAssessment.riskScore} />
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <RiskBadge
-                        level={rec.riskAssessment.riskLevel}
-                        score={rec.riskAssessment.riskScore}
-                        size="sm"
-                      />
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="px-6 py-4">
                       <StatusBadge status={rec.status} />
                     </td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => onViewScreening(rec.screeningId)}
-                        className="px-2.5 py-1 rounded bg-slate-800 hover:bg-sky-900/60 hover:text-sky-300 text-slate-300 border border-slate-700 text-[11px] font-semibold transition-colors inline-flex items-center gap-1"
-                      >
-                        <span>Inspect</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </button>
+                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
+                      {new Date(rec.timestamp).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">
+                        <span>View</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </span>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Ledger Count Footer */}
-        <div className="p-3 bg-slate-950 text-slate-500 text-[11px] border-t border-slate-800 flex items-center justify-between">
-          <span>Displaying {screenings.length} total records</span>
-          <span>Station: TERM-3-SEC-A</span>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
